@@ -1,288 +1,295 @@
+import { useEffect, useState } from "react";
 import {
-  ArrowLeft,
-  ArrowRight,
-  Bot,
-  CheckCircle2,
-  Droplets,
-  Leaf,
-  MapPin,
+  Brain,
   Sparkles,
-  Thermometer,
-  TreePine,
+  ShieldCheck,
+  ArrowRight,
+  CheckCircle2,
+  Leaf,
+  Droplets,
   Waves,
+  Wind,
+  AlertTriangle,
 } from "lucide-react";
-import { Link } from "react-router-dom";
-
-const recommendations = [
-  {
-    rank: "01",
-    icon: TreePine,
-    title: "Increase urban tree coverage",
-    description:
-      "Expand canopy and shade coverage around high-exposure urban areas.",
-    impact: "High impact",
-    impactClass: "high",
-    effect: "Heat ↓ 20 pts",
-    className: "trees",
-  },
-  {
-    rank: "02",
-    icon: Leaf,
-    title: "Expand green spaces",
-    description:
-      "Add parks, gardens and permeable green areas to improve local resilience.",
-    impact: "High impact",
-    impactClass: "high",
-    effect: "Heat ↓ 9 pts",
-    className: "green",
-  },
-  {
-    rank: "03",
-    icon: Droplets,
-    title: "Improve water conservation",
-    description:
-      "Increase water efficiency and conservation across high-demand areas.",
-    impact: "Medium impact",
-    impactClass: "medium",
-    effect: "Water ↓ 13 pts",
-    className: "water",
-  },
-  {
-    rank: "04",
-    icon: Waves,
-    title: "Strengthen sustainable infrastructure",
-    description:
-      "Improve drainage, permeability and climate-resilient infrastructure.",
-    impact: "Medium impact",
-    impactClass: "medium",
-    effect: "Flood ↓ 8 pts",
-    className: "infra",
-  },
-];
+import { useLocation } from "../context/LocationContext";
 
 function AIAnalyst() {
+  const { location, environment, loading: locationLoading } = useLocation();
+
+  const [analysis, setAnalysis] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadAnalysis = async () => {
+      setLoading(true);
+      setError("");
+
+      try {
+        const response = await fetch(
+          `http://localhost:8080/api/environment/${encodeURIComponent(
+            location
+          )}/ai-analysis`
+        );
+
+        if (!response.ok) {
+          throw new Error("Unable to generate environmental analysis");
+        }
+
+        const data = await response.json();
+
+        if (!cancelled) {
+          setAnalysis(data);
+        }
+      } catch (err) {
+        console.error(err);
+
+        if (!cancelled) {
+          setAnalysis(null);
+          setError("Unable to connect to the EcoTwin AI Analyst.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadAnalysis();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [location]);
+
+  const risks = environment?.risks || {};
+
+  const riskItems = [
+    {
+      key: "heat",
+      label: "Heat",
+      value: risks.heat ?? 0,
+      icon: <Leaf size={17} />,
+      className: "heat",
+    },
+    {
+      key: "water",
+      label: "Water",
+      value: risks.water ?? 0,
+      icon: <Droplets size={17} />,
+      className: "water",
+    },
+    {
+      key: "flood",
+      label: "Flood",
+      value: risks.flood ?? 0,
+      icon: <Waves size={17} />,
+      className: "flood",
+    },
+    {
+      key: "pollution",
+      label: "Pollution",
+      value: risks.pollution ?? 0,
+      icon: <Wind size={17} />,
+      className: "pollution",
+    },
+  ];
+
+  const getRiskClass = (value) => {
+    if (value >= 70) return "high";
+    if (value >= 45) return "moderate";
+    return "low";
+  };
+
+  const overallRisk = analysis?.overallRisk ?? environment?.overallRisk ?? 0;
+
   return (
-    <div className="ai-analyst-page">
-      <header className="analyst-topbar">
-        <Link to="/" className="analyst-back">
-          <ArrowLeft size={16} />
-          Dashboard
-        </Link>
+    <main className="page ai-page">
+      <div className="page-header">
+        <div>
+          <span className="eyebrow">
+            <Sparkles size={14} />
+            AI ENVIRONMENTAL ANALYST
+          </span>
 
-        <div className="analyst-location">
-          <span className="location-pulse" />
-          <MapPin size={15} />
-          Hyderabad, India
+          <h1>Understand {location}'s environmental risks.</h1>
+
+          <p>
+            EcoTwin analyzes the environmental profile of {location} and
+            translates risk data into practical actions for a more resilient
+            future.
+          </p>
         </div>
-      </header>
 
-      <main className="analyst-content">
-        <section className="analyst-hero">
-          <div className="analyst-hero-copy">
-            <div className="analyst-eyebrow">
-              <Sparkles size={12} />
-              AI ENVIRONMENTAL ANALYST
+        <div className="ai-status">
+          <span className="ai-status-dot" />
+          <span>Analysis engine active</span>
+        </div>
+      </div>
+
+      {error && (
+        <div className="ai-error">
+          <AlertTriangle size={18} />
+          <span>{error}</span>
+        </div>
+      )}
+
+      <section className="ai-overview-grid">
+        <div className="ai-hero-card">
+          <div className="ai-hero-top">
+            <div className="ai-icon">
+              <Brain size={24} />
             </div>
 
-            <h1>
-              Turn environmental data into
-              <span> better decisions.</span>
-            </h1>
-
-            <p>
-              EcoTwin analyzes the environmental risk profile and identifies
-              the interventions with the strongest potential to improve
-              resilience.
-            </p>
-
-            <div className="analyst-meta">
-              <span>
-                <MapPin size={13} />
-                Hyderabad, India
-              </span>
-              <span>
-                <CheckCircle2 size={13} />
-                Analysis complete
-              </span>
-              <span>
-                <Bot size={13} />
-                AI-assisted assessment
-              </span>
+            <div>
+              <span>ENVIRONMENTAL INTELLIGENCE</span>
+              <h2>
+                {loading || locationLoading
+                  ? "Analyzing environmental profile..."
+                  : analysis?.primaryConcern || "Environmental Risk"}
+              </h2>
             </div>
           </div>
 
-          <div className="analyst-score">
-            <div className="analyst-score-ring">
-              <div>
-                <span>RISK SCORE</span>
-                <strong>76</strong>
-                <small>/100</small>
-              </div>
+          <div className="ai-score-row">
+            <div>
+              <span>OVERALL RISK</span>
+              <strong>{overallRisk}</strong>
+              <small>/100</small>
             </div>
 
-            <div className="analyst-score-copy">
-              <span>PRIMARY CONCERN</span>
-              <strong>Heat exposure</strong>
+            <div
+              className={`ai-risk-badge ${getRiskClass(overallRisk)}`}
+            >
+              {analysis?.riskLevel || "Loading"}
+            </div>
+          </div>
+
+          <div className="ai-analysis-text">
+            <span>AI DIAGNOSIS</span>
+
+            <p>
+              {loading || locationLoading
+                ? "Generating an environmental assessment..."
+                : analysis?.diagnosis ||
+                  "Environmental analysis will appear here."}
+            </p>
+          </div>
+        </div>
+
+        <div className="ai-risk-panel">
+          <div className="section-heading">
+            <div>
+              <span>RISK PROFILE</span>
+              <h3>{location}, India</h3>
+            </div>
+
+            <ShieldCheck size={21} />
+          </div>
+
+          <div className="ai-risk-list">
+            {riskItems.map((risk) => (
+              <div className="ai-risk-item" key={risk.key}>
+                <div className={`ai-risk-icon ${risk.className}`}>
+                  {risk.icon}
+                </div>
+
+                <div className="ai-risk-name">
+                  <strong>{risk.label} Risk</strong>
+                  <div className="ai-progress">
+                    <span
+                      style={{ width: `${risk.value}%` }}
+                    />
+                  </div>
+                </div>
+
+                <strong className="ai-risk-value">
+                  {risk.value}
+                </strong>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="ai-content-grid">
+        <div className="ai-card">
+          <div className="ai-card-heading">
+            <div>
+              <span>RECOMMENDED ACTIONS</span>
+              <h2>What EcoTwin recommends</h2>
+            </div>
+
+            <Leaf size={20} />
+          </div>
+
+          <div className="recommendation-list">
+            {(analysis?.recommendations || []).map((item, index) => (
+              <div className="recommendation-item" key={index}>
+                <div className="recommendation-number">
+                  {index + 1}
+                </div>
+
+                <div>
+                  <strong>{item}</strong>
+                  <p>
+                    A practical intervention identified from the current
+                    environmental risk profile.
+                  </p>
+                </div>
+
+                <CheckCircle2 size={18} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="ai-card impact-card">
+          <div className="ai-card-heading">
+            <div>
+              <span>POTENTIAL IMPACT</span>
+              <h2>Areas that can improve</h2>
+            </div>
+
+            <Sparkles size={20} />
+          </div>
+
+          <div className="impact-list">
+            {(analysis?.impactAreas || []).map((item, index) => (
+              <div className="impact-item" key={index}>
+                <CheckCircle2 size={17} />
+                <span>{item}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="simulation-callout">
+            <div className="simulation-callout-icon">
+              <ArrowRight size={18} />
+            </div>
+
+            <div>
+              <span>NEXT STEP</span>
               <p>
-                The highest-risk factor and strongest near-term opportunity
-                for intervention.
+                {analysis?.simulationAdvice ||
+                  "Explore interventions in the What-If Simulator."}
               </p>
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        <section className="analyst-insight">
-          <div className="insight-ai-icon">
-            <Sparkles size={23} />
-          </div>
-
-          <div className="insight-content">
-            <span>AI PRIORITY INSIGHT</span>
-            <h2>
-              Tree coverage is the highest-impact opportunity.
-            </h2>
-            <p>
-              Hyderabad's current environmental profile shows elevated heat
-              exposure alongside high pollution pressure. Increasing urban
-              canopy and green spaces could address both concerns while
-              improving resilience to future climate stress.
-            </p>
-
-            <div className="reasoning-row">
-              <div>
-                <Thermometer size={15} />
-                <span>Heat risk</span>
-                <strong>82</strong>
-              </div>
-
-              <div>
-                <Leaf size={15} />
-                <span>Tree coverage</span>
-                <strong>32%</strong>
-              </div>
-
-              <div>
-                <Waves size={15} />
-                <span>Pollution risk</span>
-                <strong>73</strong>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="recommendations-section">
-          <div className="recommendations-heading">
-            <div>
-              <span>RECOMMENDED ACTIONS</span>
-              <h2>Where should we act first?</h2>
-            </div>
-
-            <div className="confidence-pill">
-              <CheckCircle2 size={13} />
-              High confidence
-            </div>
-          </div>
-
-          <p className="recommendations-description">
-            Ranked by estimated environmental impact across the current
-            location profile.
-          </p>
-
-          <div className="recommendations-list">
-            {recommendations.map((item) => {
-              const Icon = item.icon;
-
-              return (
-                <article
-                  className={`recommendation-card ${item.className}`}
-                  key={item.rank}
-                >
-                  <div className="recommendation-rank">{item.rank}</div>
-
-                  <div className="recommendation-icon">
-                    <Icon size={21} />
-                  </div>
-
-                  <div className="recommendation-copy">
-                    <div className="recommendation-title">
-                      <h3>{item.title}</h3>
-                      <span className={item.impactClass}>{item.impact}</span>
-                    </div>
-
-                    <p>{item.description}</p>
-                  </div>
-
-                  <div className="recommendation-effect">
-                    <span>ESTIMATED EFFECT</span>
-                    <strong>{item.effect}</strong>
-                  </div>
-
-                  <ArrowRight className="recommendation-arrow" size={17} />
-                </article>
-              );
-            })}
-          </div>
-        </section>
-
-        <section className="analyst-bottom-grid">
-          <div className="reasoning-card">
-            <div className="reasoning-header">
-              <div className="reasoning-icon">
-                <Bot size={19} />
-              </div>
-              <div>
-                <span>ANALYSIS REASONING</span>
-                <h3>Why these recommendations?</h3>
-              </div>
-            </div>
-
-            <div className="reasoning-steps">
-              <div>
-                <strong>01</strong>
-                <p>
-                  Heat risk is the largest contributor to the current
-                  environmental score.
-                </p>
-              </div>
-
-              <div>
-                <strong>02</strong>
-                <p>
-                  Low urban canopy creates an actionable opportunity to reduce
-                  heat exposure.
-                </p>
-              </div>
-
-              <div>
-                <strong>03</strong>
-                <p>
-                  Green interventions can provide multiple environmental
-                  benefits rather than addressing a single risk.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="analyst-cta">
-            <div className="cta-orbit">
-              <Sparkles size={20} />
-            </div>
-
-            <span>NEXT STEP</span>
-            <h3>See what happens if we act.</h3>
-            <p>
-              Test the recommended interventions and explore their projected
-              effect on Hyderabad's environmental risk.
-            </p>
-
-            <Link to="/simulator" className="analyst-cta-button">
-              Open Impact Simulator
-              <ArrowRight size={16} />
-            </Link>
-          </div>
-        </section>
-      </main>
-    </div>
+      <div className="ai-disclaimer">
+        <ShieldCheck size={16} />
+        <span>
+          EcoTwin provides scenario-based environmental analysis for
+          decision support. Results are estimates and depend on local
+          conditions and real-world implementation.
+        </span>
+      </div>
+    </main>
   );
 }
 
