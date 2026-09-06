@@ -12,8 +12,10 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { useLocation } from "../context/LocationContext";
+import { useNavigate } from "react-router-dom";
 
 function AIAnalyst() {
+  const navigate = useNavigate();
   const { location, environment, loading: locationLoading } = useLocation();
 
   const [analysis, setAnalysis] = useState(null);
@@ -270,12 +272,20 @@ function AIAnalyst() {
               <ArrowRight size={18} />
             </div>
 
-            <div>
+            <div className="simulation-callout-content">
               <span>NEXT STEP</span>
               <p>
                 {analysis?.simulationAdvice ||
                   "Explore interventions in the What-If Simulator."}
               </p>
+
+              <button
+                className="ai-simulation-button"
+                onClick={() => navigate("/simulator")}
+              >
+                Explore this intervention
+                <ArrowRight size={16} />
+              </button>
             </div>
           </div>
         </div>

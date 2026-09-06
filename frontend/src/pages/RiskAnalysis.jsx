@@ -20,6 +20,7 @@ import {
   Tooltip,
 } from "recharts";
 import { Link } from "react-router-dom";
+import { useLocation } from "../context/LocationContext";
 
 const trendData = [
   { date: "Aug 08", risk: 83 },
@@ -31,50 +32,105 @@ const trendData = [
   { date: "Sep 06", risk: 76 },
 ];
 
-const risks = [
+const riskConfig = [
   {
+    key: "heat",
     name: "Heat Risk",
-    score: 82,
-    level: "High",
     icon: Thermometer,
     className: "heat",
     description:
-      "Elevated temperature exposure and urban heat concentration are the largest environmental concerns.",
-    factors: ["High daytime temperatures", "Urban heat-island effect", "Limited shade coverage"],
+      "Elevated temperature exposure and urban heat concentration are major environmental concerns.",
+    factors: [
+      "High daytime temperatures",
+      "Urban heat-island effect",
+      "Limited shade coverage",
+    ],
   },
   {
+    key: "water",
     name: "Water Stress",
-    score: 67,
-    level: "Moderate",
     icon: Droplets,
     className: "water",
     description:
       "Water demand is putting increasing pressure on available local resources.",
-    factors: ["Growing demand", "Seasonal variability", "Conservation opportunity"],
+    factors: [
+      "Growing demand",
+      "Seasonal variability",
+      "Conservation opportunity",
+    ],
   },
   {
+    key: "flood",
     name: "Flood Risk",
-    score: 41,
-    level: "Low",
     icon: Waves,
     className: "flood",
     description:
-      "Current flood exposure is comparatively lower, but extreme rainfall can create localized risk.",
-    factors: ["Heavy rainfall events", "Drainage pressure", "Low-lying zones"],
+      "Extreme rainfall and drainage conditions can create localized flood exposure.",
+    factors: [
+      "Heavy rainfall events",
+      "Drainage pressure",
+      "Low-lying zones",
+    ],
   },
   {
+    key: "pollution",
     name: "Pollution Risk",
-    score: 73,
-    level: "High",
     icon: Wind,
     className: "pollution",
     description:
       "Urban emissions and air-quality pressure contribute significantly to environmental risk.",
-    factors: ["Traffic emissions", "Urban activity", "Air-quality variability"],
+    factors: [
+      "Traffic emissions",
+      "Urban activity",
+      "Air-quality variability",
+    ],
   },
 ];
 
+function getLevel(score) {
+  if (score >= 70) return "High";
+  if (score >= 45) return "Moderate";
+  return "Low";
+}
+
 function RiskAnalysis() {
+  const {
+    location,
+    environment,
+    loading,
+    error,
+  } = useLocation();
+
+  const overallRisk = environment?.overallRisk ?? 0;
+  const riskLevel = environment?.riskLevel ?? "Loading";
+
+  const risks = environment
+    ? riskConfig.map((config) => {
+        const score = environment.risks?.[config.key] ?? 0;
+
+        return {
+          ...config,
+          score,
+          level: getLevel(score),
+        };
+      })
+    : [];
+
+  const highestRisk = risks.length
+    ? [...risks].sort((a, b) => b.score - a.score)[0]
+    : null;
+
+  const priorityText =
+    highestRisk?.key === "heat"
+      ? "Increase urban canopy and shade coverage"
+      : highestRisk?.key === "water"
+      ? "Improve water conservation and efficiency"
+      : highestRisk?.key === "flood"
+      ? "Strengthen drainage and green infrastructure"
+      : highestRisk?.key === "pollution"
+      ? "Reduce urban emissions and improve air quality"
+      : "Review environmental interventions";
+
   return (
     <div className="risk-analysis-page">
       <header className="analysis-topbar">
@@ -86,29 +142,48 @@ function RiskAnalysis() {
         <div className="analysis-location">
           <span className="location-pulse" />
           <MapPin size={15} />
-          Hyderabad, India
+          {location}, India
         </div>
       </header>
 
       <main className="analysis-content">
         <section className="analysis-hero">
           <div>
-            <div className="analysis-eyebrow">ENVIRONMENTAL RISK INTELLIGENCE</div>
-            <h1>Understand what is<br /><span>driving the risk.</span></h1>
+            <div className="analysis-eyebrow">
+              ENVIRONMENTAL RISK INTELLIGENCE
+            </div>
+
+            <h1>
+              Understand what is
+              <br />
+              <span>driving the risk.</span>
+            </h1>
+
             <p>
-              EcoTwin breaks down the environmental health of Hyderabad into
+              EcoTwin breaks down the environmental health of {location} into
               measurable risk factors and identifies the areas where action can
               make the biggest difference.
             </p>
           </div>
 
           <div className="analysis-score-card">
-            <div className="score-card-label">OVERALL ENVIRONMENTAL RISK</div>
-            <div className="analysis-score">
-              76<span>/100</span>
+            <div className="score-card-label">
+              OVERALL ENVIRONMENTAL RISK
             </div>
-            <div className="score-status">HIGH RISK</div>
-            <p>Heat and pollution are currently the largest contributors.</p>
+
+            <div className="analysis-score">
+              {loading ? "—" : overallRisk}
+              <span>/100</span>
+            </div>
+
+            <div className="score-status">
+              {loading ? "LOADING" : `${riskLevel.toUpperCase()} RISK`}
+            </div>
+
+            <p>
+              {environment?.summary ||
+                "Loading environmental assessment..."}
+            </p>
           </div>
         </section>
 
@@ -119,6 +194,7 @@ function RiskAnalysis() {
                 <span>RISK HISTORY</span>
                 <h2>Environmental Risk Trend</h2>
               </div>
+
               <div className="period-pill">Last 30 days</div>
             </div>
 
@@ -130,25 +206,53 @@ function RiskAnalysis() {
               <ResponsiveContainer width="100%" height={290}>
                 <AreaChart data={trendData}>
                   <defs>
-                    <linearGradient id="riskFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#4d8973" stopOpacity={0.22} />
-                      <stop offset="100%" stopColor="#4d8973" stopOpacity={0.02} />
+                    <linearGradient
+                      id="riskFill"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop
+                        offset="0%"
+                        stopColor="#4d8973"
+                        stopOpacity={0.22}
+                      />
+                      <stop
+                        offset="100%"
+                        stopColor="#4d8973"
+                        stopOpacity={0.02}
+                      />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid stroke="#e7eeeb" vertical={false} />
+
+                  <CartesianGrid
+                    stroke="#e7eeeb"
+                    vertical={false}
+                  />
+
                   <XAxis
                     dataKey="date"
-                    tick={{ fontSize: 9, fill: "#8a9993" }}
+                    tick={{
+                      fontSize: 9,
+                      fill: "#8a9993",
+                    }}
                     axisLine={false}
                     tickLine={false}
                   />
+
                   <YAxis
-                    domain={[60, 90]}
-                    tick={{ fontSize: 9, fill: "#8a9993" }}
+                    domain={[30, 100]}
+                    tick={{
+                      fontSize: 9,
+                      fill: "#8a9993",
+                    }}
                     axisLine={false}
                     tickLine={false}
                   />
+
                   <Tooltip />
+
                   <Area
                     type="monotone"
                     dataKey="risk"
@@ -167,19 +271,21 @@ function RiskAnalysis() {
             </div>
 
             <span>AI ENVIRONMENTAL ANALYST</span>
+
             <h2>What needs attention?</h2>
 
             <p>
-              Heat exposure is EcoTwin's highest-risk factor. Increasing tree
-              coverage and green spaces could provide the strongest near-term
-              opportunity to reduce environmental stress.
+              {highestRisk
+                ? `${highestRisk.name} is currently EcoTwin's highest-risk factor for ${location}. Reviewing targeted interventions here could provide the strongest near-term opportunity to reduce environmental stress.`
+                : "EcoTwin is analyzing the environmental profile."}
             </p>
 
             <div className="ai-priority">
               <AlertTriangle size={16} />
+
               <div>
                 <strong>Priority intervention</strong>
-                <span>Increase urban canopy and shade coverage</span>
+                <span>{priorityText}</span>
               </div>
             </div>
 
@@ -196,49 +302,67 @@ function RiskAnalysis() {
               <span>RISK PROFILE</span>
               <h2>Environmental Risk Factors</h2>
             </div>
+
             <div className="live-indicator">
               <Activity size={14} />
-              Live assessment
+              {loading ? "Updating" : "Live assessment"}
             </div>
           </div>
 
-          <div className="risk-analysis-list">
-            {risks.map((risk) => {
-              const Icon = risk.icon;
+          {error ? (
+            <div className="loading-state">
+              {error}
+            </div>
+          ) : loading ? (
+            <div className="loading-state">
+              Loading environmental risks...
+            </div>
+          ) : (
+            <div className="risk-analysis-list">
+              {risks.map((risk) => {
+                const Icon = risk.icon;
 
-              return (
-                <article className={`risk-analysis-item ${risk.className}`} key={risk.name}>
-                  <div className="risk-main">
-                    <div className="risk-icon">
-                      <Icon size={21} />
+                return (
+                  <article
+                    className={`risk-analysis-item ${risk.className}`}
+                    key={risk.name}
+                  >
+                    <div className="risk-main">
+                      <div className="risk-icon">
+                        <Icon size={21} />
+                      </div>
+
+                      <div className="risk-title">
+                        <h3>{risk.name}</h3>
+                        <span>{risk.level} risk</span>
+                      </div>
+
+                      <div className="risk-number">
+                        {risk.score}
+                        <small>/100</small>
+                      </div>
                     </div>
 
-                    <div className="risk-title">
-                      <h3>{risk.name}</h3>
-                      <span>{risk.level} risk</span>
+                    <div className="risk-progress">
+                      <span
+                        style={{
+                          width: `${risk.score}%`,
+                        }}
+                      />
                     </div>
 
-                    <div className="risk-number">
-                      {risk.score}
-                      <small>/100</small>
+                    <p>{risk.description}</p>
+
+                    <div className="risk-factors">
+                      {risk.factors.map((factor) => (
+                        <span key={factor}>{factor}</span>
+                      ))}
                     </div>
-                  </div>
-
-                  <div className="risk-progress">
-                    <span style={{ width: `${risk.score}%` }} />
-                  </div>
-
-                  <p>{risk.description}</p>
-
-                  <div className="risk-factors">
-                    {risk.factors.map((factor) => (
-                      <span key={factor}>{factor}</span>
-                    ))}
-                  </div>
-                </article>
-              );
-            })}
-          </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
         </section>
 
         <section className="analysis-bottom">
@@ -246,9 +370,14 @@ function RiskAnalysis() {
             <div className="method-icon">
               <Activity size={19} />
             </div>
+
             <div>
               <span>HOW ECOTWIN ASSESSES RISK</span>
-              <h3>Multiple environmental signals → one actionable profile</h3>
+
+              <h3>
+                Multiple environmental signals → one actionable profile
+              </h3>
+
               <p>
                 Environmental indicators are normalized into comparable risk
                 scores, combined into an overall assessment, and translated
@@ -260,8 +389,11 @@ function RiskAnalysis() {
           <Link to="/simulator" className="simulation-banner">
             <div>
               <span>WHAT-IF IMPACT SIMULATOR</span>
-              <strong>See how interventions could change these risks.</strong>
+              <strong>
+                See how interventions could change these risks.
+              </strong>
             </div>
+
             <ArrowRight size={19} />
           </Link>
         </section>

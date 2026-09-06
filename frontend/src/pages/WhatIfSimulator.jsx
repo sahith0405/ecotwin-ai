@@ -327,11 +327,11 @@ function WhatIfSimulator() {
             </div>
 
             <div className="projection-levels">
-              <span className="current-level">
+              <span className={`current-level ${getLevel(currentOverall).toLowerCase()}`}>
                 {getLevel(currentOverall)} RISK
               </span>
 
-              <span className="projected-level">
+              <span className={`projected-level ${getLevel(projectedOverall).toLowerCase()}`}>
                 {getLevel(projectedOverall)} RISK
               </span>
             </div>

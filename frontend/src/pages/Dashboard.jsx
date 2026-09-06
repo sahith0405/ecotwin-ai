@@ -14,40 +14,71 @@ import TopBar from "../components/TopBar";
 import RiskCard from "../components/RiskCard";
 import RiskTrendChart from "../components/RiskTrendChart";
 import EnvironmentalPulse from "../components/EnvironmentalPulse";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useLocation } from "../context/LocationContext";
 
-const risks = [
-  {
-    type: "heat",
-    title: "Heat Risk",
-    score: 82,
-    status: "High",
-    description: "Elevated temperatures and urban heat exposure.",
-  },
-  {
-    type: "water",
-    title: "Water Stress",
-    score: 67,
-    status: "Moderate",
-    description: "Increasing pressure on available water resources.",
-  },
-  {
-    type: "flood",
-    title: "Flood Risk",
-    score: 41,
-    status: "Low",
-    description: "Moderate exposure during extreme rainfall events.",
-  },
-  {
-    type: "pollution",
-    title: "Pollution",
-    score: 73,
-    status: "High",
-    description: "Air quality affected by urban emissions.",
-  },
-];
+
 
 function Dashboard() {
+  const navigate = useNavigate();
+  const { location, environment, loading, error } = useLocation();
+
+  const risks = environment
+    ? [
+        {
+          type: "heat",
+          title: "Heat Risk",
+          score: environment.risks.heat,
+          status:
+            environment.risks.heat >= 70
+              ? "High"
+              : environment.risks.heat >= 45
+              ? "Moderate"
+              : "Low",
+          description: "Elevated temperatures and urban heat exposure.",
+        },
+        {
+          type: "water",
+          title: "Water Stress",
+          score: environment.risks.water,
+          status:
+            environment.risks.water >= 70
+              ? "High"
+              : environment.risks.water >= 45
+              ? "Moderate"
+              : "Low",
+          description: "Increasing pressure on available water resources.",
+        },
+        {
+          type: "flood",
+          title: "Flood Risk",
+          score: environment.risks.flood,
+          status:
+            environment.risks.flood >= 70
+              ? "High"
+              : environment.risks.flood >= 45
+              ? "Moderate"
+              : "Low",
+          description: "Exposure during extreme rainfall events.",
+        },
+        {
+          type: "pollution",
+          title: "Pollution",
+          score: environment.risks.pollution,
+          status:
+            environment.risks.pollution >= 70
+              ? "High"
+              : environment.risks.pollution >= 45
+              ? "Moderate"
+              : "Low",
+          description: "Air quality affected by urban emissions.",
+        },
+      ]
+    : [];
+
+  const overallRisk = environment?.overallRisk ?? 0;
+  const riskLevel = environment?.riskLevel ?? "LOADING";
+
   return (
     <div className="app-shell">
       <Sidebar />
@@ -78,7 +109,7 @@ function Dashboard() {
               <div className="hero-meta">
                 <div>
                   <MapPin size={15} />
-                  <span>Hyderabad, India</span>
+                  <span>{location}, India</span>
                 </div>
 
                 <div>
@@ -97,16 +128,16 @@ function Dashboard() {
               <div className="score-ring">
                 <div className="score-ring-inner">
                   <span>RISK SCORE</span>
-                  <strong>76</strong>
+                  <strong>{overallRisk}</strong>
                   <small>out of 100</small>
                 </div>
               </div>
 
               <div className="hero-score-info">
-                <span className="high-pill">HIGH RISK</span>
+                <span className="high-pill">{riskLevel.toUpperCase()} RISK</span>
                 <strong>Needs attention</strong>
                 <p>
-                  Heat and pollution are currently the largest contributors.
+                  {environment?.summary || "Loading environmental assessment..."}
                 </p>
 
                 <div className="score-change">
@@ -138,7 +169,10 @@ function Dashboard() {
               </p>
             </div>
 
-            <button className="ai-feature-button">
+            <button
+              className="ai-feature-button"
+              onClick={() => navigate("/ai-analyst")}
+            >
               Explore insight
               <ArrowRight size={17} />
             </button>
@@ -152,16 +186,22 @@ function Dashboard() {
                 <h2>Environmental Risk Factors</h2>
               </div>
 
-              <button className="section-link">
+              <Link to="/risk-analysis" className="section-link">
                 Full analysis
                 <ChevronRight size={15} />
-              </button>
+              </Link>
             </div>
 
             <div className="risk-grid">
-              {risks.map((risk) => (
+              {loading ? (
+                <div className="loading-state">Loading environmental risks...</div>
+              ) : error ? (
+                <div className="loading-state">{error}</div>
+              ) : (
+                risks.map((risk) => (
                 <RiskCard key={risk.type} {...risk} />
-              ))}
+                ))
+              )}
             </div>
           </section>
 
@@ -182,7 +222,7 @@ function Dashboard() {
               </div>
 
               <p className="analytics-description">
-                Overall environmental risk movement for Hyderabad.
+                Overall environmental risk movement for {location}.
               </p>
 
               <RiskTrendChart />

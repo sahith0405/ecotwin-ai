@@ -2,7 +2,11 @@ package com.ecotwin.backend.service;
 
 import com.ecotwin.backend.dto.SimulationRequest;
 import com.ecotwin.backend.dto.SimulationResponse;
+import com.ecotwin.backend.entity.EnvironmentalProfile;
+import com.ecotwin.backend.repository.EnvironmentalProfileRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -10,39 +14,54 @@ import java.util.Map;
 @Service
 public class RiskEngineService {
 
-    private static final int CURRENT_OVERALL_RISK = 76;
+    private final EnvironmentalProfileRepository repository;
 
-    private static final double BASE_HEAT = 82;
-    private static final double BASE_WATER = 67;
-    private static final double BASE_FLOOD = 41;
-    private static final double BASE_POLLUTION = 73;
+    public RiskEngineService(EnvironmentalProfileRepository repository) {
+        this.repository = repository;
+    }
 
     public Map<String, Object> getEnvironmentProfile(String location) {
 
+        EnvironmentalProfile profile = getProfile(location);
+
+        int heat = toRisk(profile.getHeatRisk());
+        int water = toRisk(profile.getWaterRisk());
+        int flood = toRisk(profile.getFloodRisk());
+        int pollution = toRisk(profile.getPollutionRisk());
+        int overallRisk = toRisk(profile.getOverallRisk());
+
         Map<String, Object> response = new LinkedHashMap<>();
 
-        response.put("location", location);
-        response.put("overallRisk", CURRENT_OVERALL_RISK);
-        response.put("riskLevel", "High");
+        response.put("location", profile.getLocation());
+        response.put("overallRisk", overallRisk);
+        response.put("riskLevel", getRiskLevel(overallRisk));
 
         Map<String, Integer> risks = new LinkedHashMap<>();
-        risks.put("heat", (int) BASE_HEAT);
-        risks.put("water", (int) BASE_WATER);
-        risks.put("flood", (int) BASE_FLOOD);
-        risks.put("pollution", (int) BASE_POLLUTION);
+        risks.put("heat", heat);
+        risks.put("water", water);
+        risks.put("flood", flood);
+        risks.put("pollution", pollution);
 
         response.put("risks", risks);
 
         response.put(
                 "summary",
-                "High environmental risk driven primarily by heat exposure, "
-                        + "water stress, and urban pollution."
+                buildSummary(heat, water, flood, pollution)
         );
 
         return response;
     }
 
     public SimulationResponse simulate(SimulationRequest request) {
+
+        EnvironmentalProfile profile = getProfile(request.location());
+
+        double baseHeat = profile.getHeatRisk();
+        double baseWater = profile.getWaterRisk();
+        double baseFlood = profile.getFloodRisk();
+        double basePollution = profile.getPollutionRisk();
+
+        int currentOverallRisk = toRisk(profile.getOverallRisk());
 
         double tree = clamp(request.treeCoverage(), 0, 50);
         double green = clamp(request.greenSpaces(), 0, 40);
@@ -52,38 +71,38 @@ public class RiskEngineService {
         );
 
         int projectedHeat = calculateRisk(
-                BASE_HEAT
+                baseHeat
                         - tree * 0.42
                         - green * 0.22
                         - infrastructure * 0.08
         );
 
         int projectedWater = calculateRisk(
-                BASE_WATER
+                baseWater
                         - water * 0.36
                         - green * 0.08
                         - infrastructure * 0.06
         );
 
         int projectedFlood = calculateRisk(
-                BASE_FLOOD
+                baseFlood
                         - green * 0.18
                         - water * 0.08
                         - infrastructure * 0.20
         );
 
         int projectedPollution = calculateRisk(
-                BASE_POLLUTION
+                basePollution
                         - tree * 0.18
                         - green * 0.12
                         - infrastructure * 0.16
         );
 
         Map<String, Integer> currentRisks = new LinkedHashMap<>();
-        currentRisks.put("heat", (int) BASE_HEAT);
-        currentRisks.put("water", (int) BASE_WATER);
-        currentRisks.put("flood", (int) BASE_FLOOD);
-        currentRisks.put("pollution", (int) BASE_POLLUTION);
+        currentRisks.put("heat", toRisk(baseHeat));
+        currentRisks.put("water", toRisk(baseWater));
+        currentRisks.put("flood", toRisk(baseFlood));
+        currentRisks.put("pollution", toRisk(basePollution));
 
         Map<String, Integer> projectedRisks = new LinkedHashMap<>();
         projectedRisks.put("heat", projectedHeat);
@@ -98,10 +117,12 @@ public class RiskEngineService {
                 projectedPollution
         );
 
-        int reduction = CURRENT_OVERALL_RISK - projectedOverall;
+        int reduction = currentOverallRisk - projectedOverall;
 
         double reductionPercent =
-                reduction * 100.0 / CURRENT_OVERALL_RISK;
+                currentOverallRisk == 0
+                        ? 0
+                        : reduction * 100.0 / currentOverallRisk;
 
         String insight = buildInsight(
                 reduction,
@@ -112,7 +133,7 @@ public class RiskEngineService {
         );
 
         return new SimulationResponse(
-                CURRENT_OVERALL_RISK,
+                currentOverallRisk,
                 projectedOverall,
                 reduction,
                 Math.round(reductionPercent * 10.0) / 10.0,
@@ -120,6 +141,15 @@ public class RiskEngineService {
                 projectedRisks,
                 insight
         );
+    }
+
+    private EnvironmentalProfile getProfile(String location) {
+
+        return repository.findByLocationIgnoreCase(location)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Environmental profile not found for: " + location
+                ));
     }
 
     private int calculateOverallRisk(
@@ -141,8 +171,46 @@ public class RiskEngineService {
         return (int) Math.round(clamp(value, 0, 100));
     }
 
+    private int toRisk(double value) {
+        return calculateRisk(value);
+    }
+
     private double clamp(double value, double min, double max) {
         return Math.max(min, Math.min(max, value));
+    }
+
+    private String getRiskLevel(int risk) {
+
+        if (risk >= 70) {
+            return "High";
+        }
+
+        if (risk >= 40) {
+            return "Moderate";
+        }
+
+        return "Low";
+    }
+
+    private String buildSummary(
+            int heat,
+            int water,
+            int flood,
+            int pollution
+    ) {
+
+        if (heat >= water && heat >= pollution) {
+            return "Environmental risk is driven primarily by heat exposure, "
+                    + "with additional pressure from water stress and pollution.";
+        }
+
+        if (water >= pollution) {
+            return "Environmental risk is driven primarily by water stress, "
+                    + "with additional pressure from heat exposure and pollution.";
+        }
+
+        return "Environmental risk is driven primarily by urban pollution, "
+                + "with additional pressure from heat exposure and water stress.";
     }
 
     private String buildInsight(
