@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "../context/LocationContext";
 import {
   ArrowLeft,
   ArrowRight,
@@ -61,6 +62,8 @@ function getLevel(score) {
 }
 
 function WhatIfSimulator() {
+  const { location, changeLocation, locations } = useLocation();
+
   const [values, setValues] = useState({
     trees: 32,
     green: 24,
@@ -72,7 +75,7 @@ function WhatIfSimulator() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const runSimulation = async (scenario) => {
+  const runSimulation = async (scenario, selectedLocation = location) => {
     setLoading(true);
     setError("");
 
@@ -85,6 +88,7 @@ function WhatIfSimulator() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
+            location: selectedLocation,
             treeCoverage: scenario.trees,
             greenSpaces: scenario.green,
             waterConservation: scenario.water,
@@ -144,32 +148,34 @@ function WhatIfSimulator() {
     runSimulation(defaultValues);
   };
 
+  const currentRisks = simulation?.currentRisks ?? baseline;
+
   const riskRows = [
     {
       key: "heat",
       label: "Heat Risk",
-      current: baseline.heat,
+      current: currentRisks.heat,
       projected: projected.heat,
       color: "heat",
     },
     {
       key: "water",
       label: "Water Stress",
-      current: baseline.water,
+      current: currentRisks.water,
       projected: projected.water,
       color: "water",
     },
     {
       key: "flood",
       label: "Flood Risk",
-      current: baseline.flood,
+      current: currentRisks.flood,
       projected: projected.flood,
       color: "flood",
     },
     {
       key: "pollution",
       label: "Pollution",
-      current: baseline.pollution,
+      current: currentRisks.pollution,
       projected: projected.pollution,
       color: "pollution",
     },
@@ -185,7 +191,22 @@ function WhatIfSimulator() {
 
         <div className="simulator-location">
           <span className="location-pulse" />
-          Hyderabad, India
+
+          <select
+            value={location}
+            onChange={(e) => {
+              const nextLocation = e.target.value;
+              changeLocation(nextLocation);
+              runSimulation(values, nextLocation);
+            }}
+            aria-label="Select simulation location"
+          >
+            <option value="Hyderabad">Hyderabad, India</option>
+            <option value="Bengaluru">Bengaluru, India</option>
+            <option value="Mumbai">Mumbai, India</option>
+            <option value="Delhi">Delhi, India</option>
+            <option value="Chennai">Chennai, India</option>
+          </select>
         </div>
       </header>
 
@@ -203,7 +224,7 @@ function WhatIfSimulator() {
 
             <p>
               Explore environmental interventions and instantly see their
-              projected effect on Hyderabad's environmental risk profile.
+              projected effect on {location}'s environmental risk profile.
             </p>
           </div>
 
@@ -371,9 +392,8 @@ function WhatIfSimulator() {
             <span>ECOTWIN INSIGHT</span>
 
             <h3>
-              {values.trees >= values.green
-                ? "Tree coverage is driving the strongest projected improvement."
-                : "Green-space expansion is driving the strongest projected improvement."}
+              {simulation?.insight ||
+                "Adjust the interventions to generate an environmental impact insight."}
             </h3>
 
             <p>
