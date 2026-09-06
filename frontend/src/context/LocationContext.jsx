@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import { API_BASE_URL } from "../config/api";
 
 const LocationContext = createContext(null);
 
@@ -32,7 +33,7 @@ export function LocationProvider({ children }) {
 
       try {
         const response = await fetch(
-          `http://localhost:8080/api/environment/${encodeURIComponent(location)}`
+          `${API_BASE_URL}/api/environment/${encodeURIComponent(location)}`
         );
 
         if (!response.ok) {

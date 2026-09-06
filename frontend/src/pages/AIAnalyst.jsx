@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../config/api";
 import { useEffect, useState } from "react";
 import {
   Brain,
@@ -31,7 +32,7 @@ function AIAnalyst() {
 
       try {
         const response = await fetch(
-          `http://localhost:8080/api/environment/${encodeURIComponent(
+          `${API_BASE_URL}/api/environment/${encodeURIComponent(
             location
           )}/ai-analysis`
         );

@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../config/api";
 import { useEffect, useState } from "react";
 import { useLocation } from "../context/LocationContext";
 import {
@@ -81,7 +82,7 @@ function WhatIfSimulator() {
 
     try {
       const response = await fetch(
-        "http://localhost:8080/api/environment/simulate",
+        `${API_BASE_URL}/api/environment/simulate`,
         {
           method: "POST",
           headers: {
