@@ -1,1 +1,6 @@
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+const configuredApiUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+const productionApiUrl = "https://ecotwin-ai-qijo.onrender.com";
+
+export const API_BASE_URL = (
+	configuredApiUrl || (import.meta.env.DEV ? "http://localhost:8080" : productionApiUrl)
+).replace(/\/$/, "");

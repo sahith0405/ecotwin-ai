@@ -101,8 +101,8 @@ function RiskAnalysis() {
     error,
   } = useLocation();
 
-  const overallRisk = environment?.overallRisk ?? 0;
-  const riskLevel = environment?.riskLevel ?? "Loading";
+  const overallRisk = environment?.overallRisk;
+  const riskLevel = environment?.riskLevel;
 
   const risks = environment
     ? riskConfig.map((config) => {
@@ -172,17 +172,16 @@ function RiskAnalysis() {
             </div>
 
             <div className="analysis-score">
-              {loading ? "—" : overallRisk}
+              {loading ? "—" : overallRisk ?? "—"}
               <span>/100</span>
             </div>
 
             <div className="score-status">
-              {loading ? "LOADING" : `${riskLevel.toUpperCase()} RISK`}
+              {loading ? "LOADING" : riskLevel ? `${riskLevel.toUpperCase()} RISK` : "UNAVAILABLE"}
             </div>
 
             <p>
-              {environment?.summary ||
-                "Loading environmental assessment..."}
+              {error || environment?.summary || "Loading environmental assessment..."}
             </p>
           </div>
         </section>

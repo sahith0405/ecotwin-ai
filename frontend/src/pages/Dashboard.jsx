@@ -76,8 +76,8 @@ function Dashboard() {
       ]
     : [];
 
-  const overallRisk = environment?.overallRisk ?? 0;
-  const riskLevel = environment?.riskLevel ?? "LOADING";
+      const overallRisk = environment?.overallRisk;
+      const riskLevel = environment?.riskLevel;
 
   return (
     <div className="app-shell">
@@ -128,16 +128,18 @@ function Dashboard() {
               <div className="score-ring">
                 <div className="score-ring-inner">
                   <span>RISK SCORE</span>
-                  <strong>{overallRisk}</strong>
+                    <strong>{loading ? "..." : overallRisk ?? "—"}</strong>
                   <small>out of 100</small>
                 </div>
               </div>
 
               <div className="hero-score-info">
-                <span className="high-pill">{riskLevel.toUpperCase()} RISK</span>
-                <strong>Needs attention</strong>
+                    <span className="high-pill">
+                      {loading ? "LOADING" : riskLevel ? `${riskLevel.toUpperCase()} RISK` : "UNAVAILABLE"}
+                    </span>
+                    <strong>{error ? "Connection failed" : "Needs attention"}</strong>
                 <p>
-                  {environment?.summary || "Loading environmental assessment..."}
+                      {error || environment?.summary || "Loading environmental assessment..."}
                 </p>
 
                 <div className="score-change">
@@ -193,15 +195,11 @@ function Dashboard() {
             </div>
 
             <div className="risk-grid">
-              {loading ? (
-                <div className="loading-state">Loading environmental risks...</div>
-              ) : error ? (
-                <div className="loading-state">{error}</div>
-              ) : (
-                risks.map((risk) => (
-                <RiskCard key={risk.type} {...risk} />
-                ))
-              )}
+                  {loading && <div className="loading-state">Loading environmental risks...</div>}
+                  {!loading && error && <div className="loading-state">{error}</div>}
+                  {!loading && !error && risks.map((risk) => (
+                    <RiskCard key={risk.type} {...risk} />
+                  ))}
             </div>
           </section>
 
