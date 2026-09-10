@@ -18,7 +18,8 @@ public class WebConfig implements WebMvcConfigurer {
                         Stream.of(
                                 "http://localhost:5173",
                                 "http://localhost:5174",
-                                "http://localhost:5175"
+                    "http://localhost:5175",
+                    "https://ecotwin-qzgh4l4zb-sahith6.vercel.app"
                         ),
                         Arrays.stream(frontendUrl.split(","))
                 )
